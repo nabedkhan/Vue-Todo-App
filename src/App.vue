@@ -20,9 +20,21 @@
       />
       <button
         type="submit"
-        class="bg-yellow-400 rounded-lg text-white px-7 uppercase font-bold"
+        class="rounded-lg text-white px-7 uppercase font-bold"
+        :class="editId ? 'bg-yellow-500' : 'bg-yellow-400 '"
       >
         {{ editId ? "Edit" : "Add" }}
+      </button>
+
+      <button
+        class="rounded-lg text-white px-7 uppercase font-bold bg-red-600"
+        v-if="editId"
+        @click="
+          editId = null;
+          todo = '';
+        "
+      >
+        Cancel
       </button>
     </form>
 
