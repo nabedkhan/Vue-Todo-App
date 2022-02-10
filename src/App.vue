@@ -1,78 +1,67 @@
 <template>
-  <div class="bg-yellow-400 p-4">
-    <h1
-      class="text-3xl font-bold text-white text-center uppercase tracking-widest"
-    >
-      Simple Vue Todo App
-    </h1>
-  </div>
+  <Heading />
 
   <section class="w-2/2 sm:w-1/2 lg:w-1/3 sm:m-auto m-10 sm:my-10">
-    <form
-      class="flex gap-1 mb-5"
-      @submit.prevent="editId ? updateTodo() : handleSubmit()"
-    >
-      <input
-        type="text"
-        class="form-input flex-1 rounded-lg border-yellow-300 focus:ring-yellow-500 focus:border-yellow-500"
-        placeholder="Write new todo..."
-        v-model="todo"
-      />
-      <button
-        type="submit"
-        class="rounded-lg text-white px-7 uppercase font-bold"
-        :class="editId ? 'bg-yellow-500' : 'bg-yellow-400 '"
-      >
-        {{ editId ? "Edit" : "Add" }}
-      </button>
+    <TodoForm
+      v-model="todo"
+      @handleSubmit="handleSubmit"
+      :editId="editId"
+      @handleCancel="handleCancel"
+    />
 
-      <button
-        class="rounded-lg text-white px-7 uppercase font-bold bg-red-600"
-        v-if="editId"
-        @click="
-          editId = null;
-          todo = '';
-        "
-      >
-        Cancel
-      </button>
-    </form>
+    <Filtered @changeFilter="handleChangeFilter" :todoList="todoList" />
 
     <Todo
-      v-for="todo in todoList"
+      v-for="todo in filteredTodos"
       :todo="todo"
       :key="todo.id"
       @delete="deleteTodo"
       @update="editTodo"
+      @complete="todoComplete"
     />
   </section>
 </template>
 
 <script>
+import Filtered from "./components/Filtered.vue";
+import Heading from "./components/Heading.vue";
 import Todo from "./components/Todo.vue";
+import TodoForm from "./components/TodoForm.vue";
 
 export default {
-  components: { Todo },
+  components: { Todo, TodoForm, Heading, Filtered },
+
   data() {
     return {
       todo: "",
-      todoList: localStorage.getItem("todos")
-        ? JSON.parse(localStorage.getItem("todos"))
-        : [],
-      editId: null,
+      editId: "",
+      todoList: [],
+      filteredValue: "",
     };
   },
+
   methods: {
     handleSubmit() {
-      const newTodo = { id: Date.now().toString(), title: this.todo };
-      this.todoList.push(newTodo);
-      localStorage.setItem("todos", JSON.stringify(this.todoList));
-      this.todo = "";
+      if (this.editId) {
+        this.todoList = this.todoList.map((item) =>
+          item.id === this.editId ? { ...item, title: this.todo } : item
+        );
+        this.todo = "";
+        this.editId = "";
+      } else {
+        const newTodo = {
+          complete: false,
+          title: this.todo,
+          createdAt: new Date(),
+          id: Date.now().toString(),
+        };
+        this.todoList.push(newTodo);
+        this.todo = "";
+      }
     },
 
     deleteTodo(id) {
       this.todoList = this.todoList.filter((item) => item.id !== id);
-      localStorage.setItem("todos", JSON.stringify(this.todoList));
     },
 
     editTodo(todo) {
@@ -80,14 +69,42 @@ export default {
       this.todo = todo.title;
     },
 
-    updateTodo() {
-      this.todoList = this.todoList.map((item) =>
-        item.id === this.editId ? { ...item, title: this.todo } : item
-      );
-      localStorage.setItem("todos", JSON.stringify(this.todoList));
+    todoComplete(todo) {
+      todo.complete = !todo.complete;
+    },
 
+    handleCancel() {
+      this.editId = "";
       this.todo = "";
-      this.editId = null;
+    },
+
+    handleChangeFilter(value) {
+      this.filteredValue = value;
+    },
+  },
+
+  watch: {
+    todoList: {
+      handler(value) {
+        localStorage.setItem("todoList", JSON.stringify(value));
+      },
+      deep: true,
+    },
+  },
+
+  mounted() {
+    this.todoList = JSON.parse(localStorage.getItem("todoList")) || [];
+  },
+
+  computed: {
+    filteredTodos() {
+      if (this.filteredValue === "incomplete") {
+        return this.todoList.filter((item) => !item.complete);
+      } else if (this.filteredValue === "complete") {
+        return this.todoList.filter((item) => item.complete);
+      } else {
+        return this.todoList;
+      }
     },
   },
 };
